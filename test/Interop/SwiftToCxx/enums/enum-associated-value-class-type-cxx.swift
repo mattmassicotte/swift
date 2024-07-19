@@ -29,6 +29,16 @@ extension E {
   }
 }
 
+public enum F {
+  case a(Int)
+  case b([C])
+}
+
+public enum G<T> {
+  case a(Int)
+  case b([T])
+}
+
 // CHECK:      SWIFT_INLINE_THUNK E E::_impl_c::operator()(const C& val) const {
 // CHECK-NEXT:   auto result = E::_make();
 // CHECK-NEXT:   auto op = swift::_impl::_impl_RefCountedClass::copyOpaquePointer(val);
