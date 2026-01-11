@@ -201,10 +201,12 @@ public final class TaskLocal<Value: Sendable>: Sendable, CustomStringConvertible
   /// If the value is a reference type, it will be retained for the duration of
   /// the operation closure.
   @inlinable
+  @usableFromInline
   @discardableResult
   @available(SwiftStdlib 5.1, *)
+  @available(*, deprecated, message: "Replaced by nonisolated(nonsending) overload")
   @backDeployed(before: SwiftStdlib 6.0)
-  public func withValue<R>(_ valueDuringOperation: Value,
+  func withValue<R>(_ valueDuringOperation: Value,
                            operation: () async throws -> R,
                            isolation: isolated (any Actor)? = #isolation,
                            file: String = #fileID, line: UInt = #line) async rethrows -> R {
@@ -213,6 +215,30 @@ public final class TaskLocal<Value: Sendable>: Sendable, CustomStringConvertible
       operation: operation,
       isolation: isolation,
       file: file, line: line)
+  }
+
+  @inlinable
+  @_alwaysEmitIntoClient
+  @available(SwiftStdlib 5.1, *)
+  @abi(
+    nonisolated(nonsending) func withValueNonisolatedNonsending<R, Failure: Error>(
+      _ valueDuringOperation: Value,
+      operation: () async throws(Failure) -> R,
+      file: String,
+      line: UInt
+    ) async throws(Failure) -> R
+  )
+  public nonisolated(nonsending) func withValue<R, Failure: Error>(_ valueDuringOperation: Value,
+                           operation: () async throws(Failure) -> R,
+                           file: String = #fileID, line: UInt = #line) async throws(Failure) -> R {
+    do { return try await withValueImpl(
+      valueDuringOperation,
+      operation: operation,
+      isolation: #isolation,
+      file: file, line: line)
+    } catch {
+      throw error as! Failure
+    }
   }
 
   // Note: hack to stage out @_unsafeInheritExecutor forms of various functions
@@ -307,8 +333,8 @@ public final class TaskLocal<Value: Sendable>: Sendable, CustomStringConvertible
   /// the operation closure.
   @inlinable
   @discardableResult
-  public func withValue<R>(_ valueDuringOperation: Value, operation: () throws -> R,
-                           file: String = #fileID, line: UInt = #line) rethrows -> R {
+  public func withValue<R, Failure: Error>(_ valueDuringOperation: Value, operation: () throws(Failure) -> R,
+                           file: String = #fileID, line: UInt = #line) throws(Failure) -> R {
 #if $BuiltinConcurrencyStackNesting
     Builtin.taskLocalValuePush(key, valueDuringOperation)
     defer { Builtin.taskLocalValuePop() }
